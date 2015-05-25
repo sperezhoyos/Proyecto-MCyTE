@@ -7,18 +7,8 @@ import scipy.optimize as op
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
-# Common variables? - check the need for this block
-lon = []
-iparf = []
-mu0obs = []
-muobs = []
-mod = []
-londism = []
-interpolated_values = []
-delta = []
-values = []
 
-def func(x, P3, T1):
+def read_scattering_angles():
 	lines1 = open('file1.txt','r')
 	lines2 = open('file2.txt','r')
 	lines3 = open('file3.txt','r')
@@ -31,6 +21,9 @@ def func(x, P3, T1):
 		mu0.append(float(line))
 	for line in lines3:
 		deltaphi.append(float(line))
+        return mu, mu0, deltaphi
+
+def write_model(mu, mu0, deltaphi, P3,T2):
 	newmodel = open('model.ini','w')
 	newmodel.write("'LAMBDA (MICRONS) '     0.890" + "\n")
 	newmodel.write("'NUMBER OF LAYERS '     -7" + "\n")
@@ -77,7 +70,7 @@ def func(x, P3, T1):
 	newmodel.write("'P_BOTTOM (bars)  '    0.500" + "\n")
 	newmodel.write("'K_CH4 (1/Km-amag)'    21.5" + "\n")
 	newmodel.write("'PHASE FUNCTION   '    'do_mie'" + "\n")
-	newmodel.write("'TAU_EXT PARTICLES'    "+ str(T1) + "\n")
+	newmodel.write("'TAU_EXT PARTICLES'    "+ str(T2) + "\n")
 	newmodel.write("'FOURIER TERMS    '    20" + "\n")
 	newmodel.write("'Re(m) & -Im(m)   '    1.430  -0.0100" + "\n")
 	newmodel.write("'SIZE DISTRIBUTION'    'hansen' 1.00 0.100" + "\n")
@@ -104,15 +97,30 @@ def func(x, P3, T1):
 	newmodel.write("'END              '" + "\n")
 	newmodel.write("\n")
 	newmodel.close()	
+        return None
+
+def execute_atmos():
 	os.system('./atmos')	
+        return None
+
+def read_obs():
+        lon = []
+        iparf = []
+        mu0obs = []
+        muobs = []
 	lines11 = open('MT3-3.5N.dat','r').readlines()[1:]#Para leer longitudes y I/F
-	lines4 = open("points.dat","r").readlines()[80:]#El output del 'atmos'
 	for line in lines11:
 		parts = line.split()
 		lon.append(float(parts[0]))
 		iparf.append(float(parts[1]))
 		muobs.append(float(parts[2]))
 		mu0obs.append(float(parts[3]))
+        return lon, iparf, muobs, mu0obs
+
+def read_pointsdat():
+        mod = []
+        londism = []
+	lines4 = open("points.dat","r").readlines()[80:]#El output del 'atmos'
 	i = int()
 	j = int()
 	k = int()
@@ -135,6 +143,11 @@ def func(x, P3, T1):
 				parts = line.split()
 				londism.append(float(parts[0]))
 				m += 1
+        return mod,londism
+
+def interpolate_model(lon,londism,mod):
+        interpolated_values = []
+        delta = []
 	#interpolacion del modelo.
 	interpolated_y = np.interp(lon,londism,mod)
 	for item in interpolated_y:
@@ -145,7 +158,17 @@ def func(x, P3, T1):
 #	for z in range(np.size(x)):
 #		if x[z] == lon[z]:
 #			return interpolated_values[z]#Nos devuelve un valor por cada valor en x:
-			
+        return interpolated_values, delta
+
+def func(x, P3, T1):
+	mu, mu0, deltaphi = read_scattering_angles()
+	write_model(mu, mu0, deltaphi, P3,T2)
+	execute_atmos()
+        lon, iparf, muobs, mu0obs = read_obs()
+        mod,londism = read_pointsdat()
+        interpolated_values, delta = interpolate_model(lon,londism,mod)
+        return None
+
 # Define the probability function as likelihood  prior.
 def lnprior(theta):
 	P3, T1, lnf = theta
@@ -154,6 +177,7 @@ def lnprior(theta):
 	return -np.inf
 
 def lnlike(theta, x, y, yerr):
+        values = []
 	P3, T1, lnf = theta
 	N = np.size(interpolated_values)
 	for i in range(N):
