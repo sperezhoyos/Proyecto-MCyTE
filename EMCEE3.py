@@ -145,7 +145,7 @@ def read_pointsdat():
 				m += 1
         return mod,londism
 
-def interpolate_model(lon,londism,mod):
+def interpolate_model(lon,londism,mod,iparf):
         interpolated_values = []
         delta = []
 	#interpolacion del modelo.
@@ -162,12 +162,12 @@ def interpolate_model(lon,londism,mod):
 
 def func(x, P3, T1):
 	mu, mu0, deltaphi = read_scattering_angles()
-	write_model(mu, mu0, deltaphi, P3,T2)
+	write_model(mu, mu0, deltaphi, P3,T1)
 	execute_atmos()
         lon, iparf, muobs, mu0obs = read_obs()
         mod,londism = read_pointsdat()
-        interpolated_values, delta = interpolate_model(lon,londism,mod)
-        return None
+        interpolated_values, delta = interpolate_model(lon,londism,mod,iparf)
+        return interpolated_values
 
 # Define the probability function as likelihood  prior.
 def lnprior(theta):
@@ -179,6 +179,7 @@ def lnprior(theta):
 def lnlike(theta, x, y, yerr):
         values = []
 	P3, T1, lnf = theta
+        interpolated_values = func(x,P3,T1)
 	N = np.size(interpolated_values)
 	for i in range(N):
 		value = ((y[i]-interpolated_values[i])**2)/(2*lnf)
@@ -208,7 +209,7 @@ if __name__ == '__main__':
    	parts = line.split()
 	x.append(float(parts[0]))
    yerr = 0.1+0.5*np.random.rand(NN)
-   func(x,0.079,5.3)
+   interpolated_values = func(x,0.079,5.3)
    for item in interpolated_values:
 	y.append(item)
    #y += np.abs(f_true*y) * np.random.randn(NN)
@@ -248,7 +249,7 @@ if __name__ == '__main__':
    #pl.savefig("line-max-likelihood.png")
    initial_position = [0.08,5.0,0.534]
    # Set up the sampler.
-   ndim, nwalkers = 3, 500
+   ndim, nwalkers = 3, 50
    pos = [initial_position + 1e-4*np.random.randn(ndim) for i in range(nwalkers)]
    sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(x, y, yerr))
 
