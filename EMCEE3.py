@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
 
+
+
 def read_scattering_angles():
 	lines1 = open('file1.txt','r')
 	lines2 = open('file2.txt','r')
@@ -92,7 +94,7 @@ def write_model(mu, mu0, deltaphi, P3,T2):
 	newmodel.write("'TYPE OF LAYER    '     'gas'" + "\n")
 	newmodel.write("'P_TOP (bars)     '    1.75000" + "\n")
 	newmodel.write("'P_BOTTOM (bars)  '    6" + "\n")
-	newmodel.write("'K_CH4 (1/Km-amag)'    0.0215" + "\n")
+	newmodel.write("'K_CH4 (1/Km-amag)'    21.5" + "\n")
 	newmodel.write("\n")
 	newmodel.write("'END              '" + "\n")
 	newmodel.write("\n")
@@ -121,6 +123,7 @@ def read_pointsdat():
         mod = []
         londism = []
 	lines4 = open("points.dat","r").readlines()[80:]#El output del 'atmos'
+	lines11 = open('MT3-3.5N.dat','r').readlines()[1:]#Para leer longitudes y I/F
 	i = int()
 	j = int()
 	k = int()
@@ -159,6 +162,16 @@ def interpolate_model(lon,londism,mod,iparf):
 #		if x[z] == lon[z]:
 #			return interpolated_values[z]#Nos devuelve un valor por cada valor en x:
         return interpolated_values, delta
+
+def move_files(counter):
+        global counter
+        order1 = 'mv points.dat points' + str(counter,'%3g') + '.dat'
+        order2 = 'mv model.ini model' + str(counter,'%3g') + '.ini'
+        os.system(order1)
+        os.system(order2)
+        counter += 1
+        return None
+
 
 def func(x, P3, T1):
 	mu, mu0, deltaphi = read_scattering_angles()
